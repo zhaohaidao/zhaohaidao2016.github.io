@@ -86,3 +86,91 @@ Requiring Narrow Interfaces
         b := []byte{} n, err := r.Read(b) 
         … 
     }
+4、Methods Vs Functions
+
+What Is A Function?
+
+1）Operations performed on N1 inputs that results in N2 outputs 
+
+2）The same inputs will always result in the same outputs
+
+3）Functions should not depend on state
+
+What Is A Method?
+
+1）Deﬁnes the behavior of a type
+
+2）A function that operates against a value
+
+3）Should use state
+
+Functions Can Be Used With Interfaces
+
+Methods, by deﬁnition, are bound to a speciﬁc type 
+
+Functions can accept interfaces as input
+
+    func extractShortcodes(s string, p *Page, t Template) (string, map[string]shortcode, error) { 
+        … 
+        for { 
+            switch currItem.typ { 
+                … 
+                case tError: err := fmt.Errorf(“%s:%d: %s”, p.BaseFileName(), (p.lineNumRawContentStart() + pt.lexer.lineNum() - 1), currItem) 
+            } 
+        }
+        … 
+    }
+    func extractShortcodes(s string, p *Page, t Template) (string, map[string]shortcode, error) { 
+        … 
+        for { 
+            switch currItem.typ { 
+                … 
+                case tError: err := fmt.Errorf(“%s:%d: %s”, p.BaseFileName(), (p.lineNumRawContentStart() + pt.lexer.lineNum() - 1), currItem) 
+            } 
+        } 
+        … 
+    }
+5、Pointers Vs Values
+
+1）It’s not a question of performance (generally), but one of shared access
+
+2）If you want to share the value with a function or method, then use a pointer
+
+3）If you don’t want to share it, then use a value (copy)
+
+Pointer Receivers
+
+1）If you want to share a value with it’s method, use a pointer receiver
+
+2）Since methods commonly manage state, this is the common usage
+
+3) Not safe for concurrent access Value Receivers
+
+Value Receivers
+
+1）If you want the value copied(not shared), use values
+
+2）If the type is an empty struct (stateless, just behavior)… then just use value
+
+3）Safe for concurrent access
+
+    type InMemoryFile struct { 
+        at int64 
+        name string 
+        data []byte 
+        closed bool 
+    } 
+    func (f *InMemoryFile) Close() error { 
+        atomic.StoreInt64(&f.at, 0) 
+        f.closed = true 
+        return nil 
+    }
+    type Time struct { 
+        sec int64 
+        nsec uintptr 
+        loc *Location 
+    } 
+    func (t Time) IsZero() bool { 
+        return t.sec == 0 && t.nsec == 0 
+    }
+6、Thinking Of Errors As Strings
