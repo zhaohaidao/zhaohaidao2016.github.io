@@ -1,25 +1,29 @@
 并发非阻塞缓存：Go
 ===
-缓存函数：调用函数访问`map[string]string`时，`保证只计算一次`，其他调用直接返回计算结果
+##缓存函数
+调用函数访问`map[string]string`时，`保证只计算一次`，其他调用直接返回计算结果
 ，下面分别是借助锁和通信的实现方案，这两种方案说不上哪种更好，有时候从一种切换至另一种也许能使你的代码更简洁
 - - -
-+ 获取一次锁，但是互斥锁会导致并发操作完全`串行化`
+### 获取一次锁
+互斥锁会导致并发操作完全`串行化`
 
 		func (memo *Memo) Get(key string) (value interface{}, err error) {
-	    res, ok := memo.cache[key] 
+		    res, ok := memo.cache[key] 
 		    if !ok {
-			    res.value, res.err = memo.f(key)
-			    memo.cache[key] = res
-			    memo.mu.Lock()
-			    res, ok := memo.cache[key]
-		    if !ok {
-		        res.value, res.err = memo.f(key)
-		        memo.cache[key] = res
-		    }
-		    memo.mu.Unlock()
-		    return res.value, res.err
+		    	res.value, res.err = memo.f(key)
+				memo.cache[key] = res
+				memo.mu.Lock()
+				res, ok := memo.cache[key]
+				if !ok {
+					res.value, res.err = memo.f(key)
+					memo.cache[key] = res
+				}
+			memo.mu.Unlock()
+			return res.value, res.err
 		}
-+ 获取两把锁，查找阶段获取一次，如果查找为空，进入更新阶段再次获取锁，但是这样不能保证`只计算一次`，很有可能两个并发请求访问相同的key,会相互覆盖各种计算的结果
+
+### 获取两次锁
+查找阶段获取一次，如果查找为空，进入更新阶段再次获取锁，但是这样不能保证`只计算一次`，很有可能两个并发请求访问相同的key,会相互覆盖各种计算的结果
  
 		
 		func (memo *Memo) Get(key string) (value interface{}, err error) {
@@ -38,18 +42,17 @@
 		    return res.value, res.err
 		}
 		
-+ 锁结合通道(channel)：
-	- 首先获取到锁的goroutine，将channel赋值对map[key]，然后释放锁，
-	- 其他请求得到map[key]非空后，读取channel就会阻塞在该channel上，
-	- 负责更新的goroutine完成计算后，关闭该channel，实现对其他goroutine的广播，此时其他goroutine读就可以读取缓存结果了
+### 锁结合通道(channel)：
+- 首先获取到锁的goroutine，将channel赋值对map[key]，然后释放锁
+- 其他请求得到map[key]非空后，读取channel就会阻塞在该channel上
+- 负责更新的goroutine完成计算后，关闭该channel，实现对其他goroutine的广播，此时其他goroutine读就可以读取缓存结果了
 		
-		```go
 		type entry struct {
 		    res   result
 		    ready chan struct{} // closed when res is ready
 		}
 	
-		func New(f Func) \*Memo {
+		func New(f Func) *Memo {
 		    return &Memo{f: f, cache: make(map[string]*entry)}
 		}
 	
@@ -81,16 +84,16 @@
 		    }
 		    return e.res.value, e.res.err
 		}
-		```
-+ 使用channel实现并发控制-`通信`：
-	- entry的声明和之前保持一致
-	- 新增叫做requests的channel，Get的调用方用这个channel来和monitor goroutine(go server)来通信
-	- cache变量被限制在了monitor goroutine (*Memo).server中
-	- 第一个对某个key的请求负责调用f，保存结果，关闭ready channel实现广播
-	- call和deliver都需要新起goroutine执行，以免阻塞monitor goroutine
-	- deliever：其他同一个key的请求发现map[key]!=nil，就会等待结果变成ready，并将response发送给客户端
+		
+### 通信：
+- entry的声明和之前保持一致
+- 新增叫做requests的channel，Get的调用方用这个channel来和monitor goroutine(go server)来通信
+- cache变量被限制在了monitor goroutine (*Memo).server中
+- 第一个对某个key的请求负责调用f，保存结果，关闭ready channel实现广播
+- call和deliver都需要新起goroutine执行，以免阻塞monitor goroutine
+- deliever：其他同一个key的请求发现map[key]!=nil，就会等待结果变成ready，并将response发送给客户端
 	 
-		```
+		
 		// A request is a message requesting that the Func be applied to key.
 		type request struct {
 		    key      string
@@ -141,6 +144,6 @@
 		    response <- e.res
 		}
 		
-		```
+		
 		
 		
