@@ -21,9 +21,13 @@
 	    memo.mu.Unlock()
 	    return res.value, res.err
 	}
+### 3. 编译并安装
 
-
-
+	$ ./autogen.sh
+	$ ./configure --prefix=/usr/local
+	$ make
+	$ make check
+	$ sudo make install
 ### 获取两次锁
 查找阶段获取一次，如果查找为空，进入更新阶段再次获取锁，但是这样不能保证`只计算一次`，很有可能两个并发请求访问相同的key,会相互覆盖各种计算的结果
 		
