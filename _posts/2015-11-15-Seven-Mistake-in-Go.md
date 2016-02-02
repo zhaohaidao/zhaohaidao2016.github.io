@@ -6,25 +6,29 @@ title: go的7个常见错误
 
 Stop Doing This!!
     
-    func (page *Page) saveSourceAs(path string) { 
-        b := new(bytes.Buffer) 
-        b.Write(page.Source.Content) 
-        page.saveSource(b.Bytes(), path)
-    }
-    func (page *Page) saveSource(by []byte, inpath string) { 
-        WriteToDisk(inpath, bytes.NewReader(by)) 
-    } // Stop Doing This!!
+```go
+func (page *Page) saveSourceAs(path string) { 
+    b := new(bytes.Buffer) 
+    b.Write(page.Source.Content) 
+    page.saveSource(b.Bytes(), path)
+}
+func (page *Page) saveSource(by []byte, inpath string) { 
+    WriteToDisk(inpath, bytes.NewReader(by)) 
+} // Stop Doing This!!
+```
 
 Instead
 
-    func (page *Page) saveSourceAs(path string) { 
-        b := new(bytes.Buffer) 
-        b.Write(page.Source.Content) 
-        page.saveSource(b, path) 
-    } 
-    func (page *Page) saveSource(b io.Reader, inpath string) { 
-        WriteToDisk(inpath, b) 
-    } // Instead
+```go
+func (page *Page) saveSourceAs(path string) { 
+    b := new(bytes.Buffer) 
+    b.Write(page.Source.Content) 
+    page.saveSource(b, path) 
+} 
+func (page *Page) saveSource(b io.Reader, inpath string) { 
+    WriteToDisk(inpath, b) 
+} // Instead
+```
     
 2、没有正确使用Io.Reader & Io.Writer（Not Using Io.Reader & Io.Writer）
 Io.Reader & Io.Writer 
@@ -35,25 +39,32 @@ Io.Reader & Io.Writer
 
 3)Keeps operations extensible
 
-    type Reader interface { 
-        Read(p []byte) (n int, err error) 
-    } 
-    type Writer interface { 
-        Write(p []byte) (n int, err error) 
-    }
+```go
+type Reader interface { 
+    Read(p []byte) (n int, err error) 
+} 
+type Writer interface { 
+    Write(p []byte) (n int, err error) 
+}
+```
+
 Really stop do this!
 
-    func (v *Viper) ReadBufConfig(buf *bytes.Buffer) error { 
-        v.config = make(map[string]interface{}) 
-        v.marshalReader(buf, v.config) return nil 
-    }
+```go
+func (v *Viper) ReadBufConfig(buf *bytes.Buffer) error { 
+    v.config = make(map[string]interface{}) 
+    v.marshalReader(buf, v.config) return nil 
+}
+```
 Instead
 
-    func (v *Viper) ReadConfig(in io.Reader) error { 
-        v.config = make(map[string]interface{}) 
-        v.marshalReader(in, v.config) 
-        return nil 
-    }
+```go
+func (v *Viper) ReadConfig(in io.Reader) error { 
+    v.config = make(map[string]interface{}) 
+    v.marshalReader(in, v.config) 
+    return nil 
+}
+```
 3、接口滥用（Requiring Broad Interfaces）
 
 1）Interfaces Are Composable
@@ -64,28 +75,34 @@ Instead
 
 4）Compose broad interfaces made from narrower ones
 
-    type File interface { 
-        io.Closer 
-        io.Reader 
-        io.ReaderAt 
-        io.Seeker 
-        io.Writer 
-        io.WriterAt 
-    } // Composing Interfaces
+```go
+type File interface { 
+    io.Closer 
+    io.Reader 
+    io.ReaderAt 
+    io.Seeker 
+    io.Writer 
+    io.WriterAt 
+} // Composing Interfaces
+```
 
 Requiring Broad Interfaces
 
-    func ReadIn(f File) { 
-        b := []byte{} n, err := f.Read(b) 
-        … 
-    }
+```go
+func ReadIn(f File) { 
+    b := []byte{} n, err := f.Read(b) 
+    … 
+}
+```
     
 Requiring Narrow Interfaces
 
-    func ReadIn(r Reader) { 
-        b := []byte{} n, err := r.Read(b) 
-        … 
-    }
+```go
+func ReadIn(r Reader) { 
+    b := []byte{} n, err := r.Read(b) 
+    … 
+}
+```
 4、Methods Vs Functions
 
 What Is A Function?
@@ -110,26 +127,28 @@ Methods, by deﬁnition, are bound to a speciﬁc type
 
 Functions can accept interfaces as input
 
-    func extractShortcodes(s string, p *Page, t Template) (string, map[string]shortcode, error) { 
-        … 
-        for { 
-            switch currItem.typ { 
-                … 
-                case tError: err := fmt.Errorf(“%s:%d: %s”, p.BaseFileName(), (p.lineNumRawContentStart() + pt.lexer.lineNum() - 1), currItem) 
-            } 
-        }
-        … 
-    }
-    func extractShortcodes(s string, p *Page, t Template) (string, map[string]shortcode, error) { 
-        … 
-        for { 
-            switch currItem.typ { 
-                … 
-                case tError: err := fmt.Errorf(“%s:%d: %s”, p.BaseFileName(), (p.lineNumRawContentStart() + pt.lexer.lineNum() - 1), currItem) 
-            } 
+```go
+func extractShortcodes(s string, p *Page, t Template) (string, map[string]shortcode, error) { 
+    … 
+    for { 
+        switch currItem.typ { 
+            … 
+            case tError: err := fmt.Errorf(“%s:%d: %s”, p.BaseFileName(), (p.lineNumRawContentStart() + pt.lexer.lineNum() - 1), currItem) 
         } 
-        … 
     }
+    … 
+}
+func extractShortcodes(s string, p *Page, t Template) (string, map[string]shortcode, error) { 
+    … 
+    for { 
+        switch currItem.typ { 
+            … 
+            case tError: err := fmt.Errorf(“%s:%d: %s”, p.BaseFileName(), (p.lineNumRawContentStart() + pt.lexer.lineNum() - 1), currItem) 
+        } 
+    } 
+    … 
+}
+```
 5、Pointers Vs Values
 
 1）It’s not a question of performance (generally), but one of shared access
@@ -154,6 +173,7 @@ Value Receivers
 
 3）Safe for concurrent access
 
+```go
     type InMemoryFile struct { 
         at int64 
         name string 
@@ -173,4 +193,5 @@ Value Receivers
     func (t Time) IsZero() bool { 
         return t.sec == 0 && t.nsec == 0 
     }
+```
 6、Thinking Of Errors As Strings
