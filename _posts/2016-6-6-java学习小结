@@ -1,0 +1,11 @@
+---
+layout: post
+title: 单测学习笔记
+---
+
+# 多线程
+# daemon thread
+# 异常
++ 为何tracker线程并不抛异常
+# tomcat
++ docBases使用相对路径找不到listener，使用绝对路径才行

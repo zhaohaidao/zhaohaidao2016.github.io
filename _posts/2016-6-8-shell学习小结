@@ -1,0 +1,8 @@
+---
+layout: post
+title: shell学习小结
+---
+
+# xargs
++ xargs 执行时，类似 find ./ -name "*"|xargs -I{} cat test.conf >> {}失效
++ 解决方案 find ./ -name "*"|xargs -i sh -c "cat test.conf >> {}""

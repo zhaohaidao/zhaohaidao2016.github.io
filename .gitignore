@@ -14,3 +14,4 @@ package.json
 *.xml
 
 _posts/.jekyll-metadata
+.jekyll-metadata
